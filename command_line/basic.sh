@@ -1,1 +1,1 @@
-sed 's/,/;/' x.csv | sed 's/,/;/'
+sed 's/,/;/' ./data/id_all_property.csv | sed 's/,/;/; s/(//g; s/)//g; s/{//g; s/}//g; s/,[0-9][0-9][0-9],/,/g ; s/,[0-9][0-9],/,/g;  s/,[0-9],/,/g; s/,[0-9]//;  s/www.www.auctionzip.ca/property_999999/ ; s/property/prp/g;  '  > ./data/id_all_property_no_count.csv
