@@ -34,14 +34,42 @@
   dev_train_basic <- fread("data/dev_train_basic.csv",stringsAsFactors =FALSE)
   dev_test_basic <- fread("data/dev_test_basic.csv",stringsAsFactors =FALSE)
   cookie_all_basic <- fread("data/cookie_all_basic.csv",stringsAsFactors =FALSE)
+  id_property <- fread('./data/id_property_top20_noCounts.csv', stringsAsFactors = F)
   
- }
+}
 
 ################################################################################################
 # data processing
 {
-  keycols <- c("country", "anonymous_c0", "anonymous_c1", "anonymous_c2")
-  xsummary <- ddply(cookie_all_basic, .(country, anonymous_c0, anonymous_c1, anonymous_c2), .fun=myFun)
+  device_property <- id_property[device_or_cookie_indicator == 0,]
+  device_property$device_or_cookie_indicator <- NULL
+  colnames(device_property)[1] <- "device_id"
+  cookie_property <- id_property[device_or_cookie_indicator == 1,]
+  cookie_property$device_or_cookie_indicator <- NULL
+  colnames(cookie_property)[1] <- "cookie_id"
+  
+  # attach cookie property info to cookie_all_basic
+  cookie_all_basic <- merge(cookie_all_basic, cookie_property, by = "cookie_id", all.x = T)
+  cookie_all_basic[is.na(cookie_all_basic)] <- -1
+  
+  # attach device property to dev_train_basic
+  dev_train_basic <- merge(dev_train_basic, device_property, by = "device_id", all.x = T)
+  dev_train_basic[is.na(dev_train_basic)] <- -1
+  
+  # attach device property to dev_test_basic
+  dev_test_basic <- merge(dev_test_basic, device_property, by = "device_id", all.x = T)
+  dev_test_basic[is.na(dev_test_basic)] <- -1
+  
+  
+}
+
+################################################################################################
+# build submission
+{
+  keycols <- c("country", "anonymous_c0", "anonymous_c1", "anonymous_c2", "prp_451009")
+  xsummary <- ddply(cookie_all_basic, 
+                    .(country, anonymous_c0, anonymous_c1, anonymous_c2, prp_451009), 
+                    .fun=myFun)
   xsummary <- xsummary[,c(keycols, "cookie_id")]
   xsummary <- unique(xsummary)
   xsummary <- data.table(xsummary)
@@ -55,42 +83,8 @@
   xtest <- merge(dev_test_basic,xsummary,all.x=TRUE)
   
   xsub <- data.frame(xtest)[,c("device_id","cookie_id")]
-   write.csv(xsub,file="submissions/submission_country_c0_c1_c2_popular_cookie.csv",
+   write.csv(xsub,file="submissions/sub_country_c0_c1_c2_p451009.csv",
             row.names=FALSE, quote = F)
-  
-  
+
   
 }
-
-
-
-
-
-
-
-xsub <- merge(dev_test_basic,country_anon5_summary,all.x=TRUE)
-xsub <- data.frame(xtest)
-xsub <- xsub[,c("device_id","freq")]
-names(xsub) <- c("device_id","cookie_id")
-write.csv(xsub,file="submissions/submission_country_c0_popular_cookie.csv",
-          row.names=FALSE, quote = F)
-
-
-## 
-country_summary <- ddply(cookie_all_basic, .(country), .fun=myFun)
-country_summary <- country_summary[,c(5,12)]
-
-
-setkey(dev_test_basic,country)
-country_summary <- unique(country_summary)
-country_summary <- data.table(country_summary)
-setkey(country_summary,country)
-
-
-submission_country_popular_cookie <- merge(dev_test_basic,country_summary,all.x=TRUE)
-submission_country_popular_cookie <- data.frame(submission_country_popular_cookie)
-submission_country_popular_cookie <- submission_country_popular_cookie[,c("device_id","freq")]
-
-names(submission_country_popular_cookie) <- c("device_id","freq")
-write.csv(submission_country_popular_cookie,file="submissions/submission_country_popular_cookie.csv",
-          row.names=FALSE, quote = F)
