@@ -35,9 +35,10 @@
 }
 
 ################################################################################################
-# load data: id_all_property
+# load data
 {
   id_all_ip <- readLines('./data/id_all_property.csv')
+  id_all_ip <- readLines('./data/id_all_ip_v2.csv')
 }
 
 ################################################################################################
@@ -75,4 +76,17 @@
   # store
   write.table(id_combined, file = "./data/id_property_top20_noCounts.csv",
               row.names = F, col.names = T, sep = ",", quote = F)
- }
+}
+
+################################################################################################
+# load data: id_all_ip
+{
+  id_ip <- fread('./data/id_all_ip_v2.csv', header = T, sep = ";")
+  setnames(id_ip, colnames(id_ip), c(colnames(id_ip)[1:2],"ip_info"))
+  
+  ip_length <- str_length(id_ip$ip_info)
+  id_ip$nof_ips <- as.integer(ip_length/ min(ip_length))
+  id_ip$ip_info <- NULL
+  
+  write.table(id_ip, file = "./data/id_ip_counts.csv", row.names = F, col.names = T, sep = ",", quote = F)
+}
