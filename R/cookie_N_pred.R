@@ -61,8 +61,8 @@ rf.h20 <- h2o.gbm(x = names(x0_train)[1:ncol(x0_train) -1],
                   training_frame = x0_train,
                   validation_frame = x0_valid,
                   ntrees = 1000)
-rf.pred <- as.data.frame(h2o.predict(rf.h20, x0_valid))
-valid[, preds := rf.pred$predict]
+y_pred <- as.data.frame(h2o.predict(rf.h20, x0_valid))
+valid[, preds :=y_pred$predict]
 
 
 
