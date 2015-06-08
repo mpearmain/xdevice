@@ -5,83 +5,72 @@
 # A simple extension is to combine top N per country number to the predicted number of cookies.
 
 library(data.table)
-
-# Fetch the latest nightly build using Jo-fai Chow's package
-# devtools::install_github("woobe/deepr")
-deepr::install_h2o()
-library(h2o)
+require(xgboost)
+require(data.table)
+require(methods)
 
 # If training and validation splits of data have not been created run
 source('./cv/cv.R') #to create data sets for reproducibility.
-
-train <- fread('./data/train_basic90.csv', stringsAsFactors = T)
-valid <- fread('./data/valid_basic10.csv', stringsAsFactors = T)
-full.train <- fread('./data/dev_train_basic_manips.csv', stringsAsFactors = T)
-test <- fread('./data/dev_test_basic_manips.csv', stringsAsFactors = T)
-
-train[, device_type_f := as.factor(device_type_f)]
-train[, device_os_f:= as.factor(device_os_f)]
-train[, country_f := as.factor(country_f)]
-train[, anonymous_c1_f := as.factor(anonymous_c1_f)]
-train[, anonymous_c2_f := as.factor(anonymous_c2_f)]
-
-valid[, device_type_f := as.factor(device_type_f)]
-valid[, device_os_f:= as.factor(device_os_f)]
-valid[, country_f := as.factor(country_f)]
-valid[, anonymous_c1_f := as.factor(anonymous_c1_f)]
-valid[, anonymous_c2_f := as.factor(anonymous_c2_f)]
-
-full.train[, device_type_f := as.factor(device_type_f)]
-full.train[, device_os_f:= as.factor(device_os_f)]
-full.train[, country_f := as.factor(country_f)]
-full.train[, anonymous_c1_f := as.factor(anonymous_c1_f)]
-full.train[, anonymous_c2_f := as.factor(anonymous_c2_f)]
-
-test[, device_type_f := as.factor(device_type_f)]
-test[, device_os_f:= as.factor(device_os_f)]
-test[, country_f := as.factor(country_f)]
-test[, anonymous_c1_f := as.factor(anonymous_c1_f)]
-test[, anonymous_c2_f := as.factor(anonymous_c2_f)]
+# Run feature engieering for cookies
+source('./R/cookie_n_feat_engineer.R')
 
 
 # Read cookie data.
 cookies <- fread('./data/cookie_all_basic.csv')
-
 # find the number of cookies per 'drawbridge-handle'
 cookies.tbl <- cookies[, list('cookie_cnt' = .N), by = "drawbridge_handle"]
-
 # We loose some unmatched values here as its a natural join.
 train <- merge(train, cookies.tbl, by = 'drawbridge_handle')
 valid <- merge(valid, cookies.tbl, by = 'drawbridge_handle')
-
 # Its a big flaw doing this as classification as it bounds the options,
 # however i think it'll get us a long way just predicting more than #1 cookie slot.
 train[, cookie_cnt := as.factor(cookie_cnt)]
 valid[, cookie_cnt := as.factor(cookie_cnt)]
 
-# Build a quick Random Forest model to predict number of cookies.
-#
-# randomForest here is painful as it takes a Looooooong time, hence h20 its also easy to switch to
-# gbm if required.
+# Build a quick xgboost model to predict number of cookies.
+x0_train <- train[, c(3:11), with = FALSE]
+x0_valid <- valid[, c(3:11), with = FALSE]
+x0_full_train <- full.train[, c(3:11), with = FALSE]
+x0_test <- test[, c(3:11), with = FALSE]
 
-localH2O = h2o.init(max_mem_size = "20g", nthreads = 8)
+y <- train[, cookie_cnt]
+y <- as.integer(y)-1 #xgboost take features in [0,numOfClass)
 
-x0_train <- as.h2o(train[, c(3:12), with = FALSE])
-x0_valid <- as.h2o(valid[, c(3:12), with = FALSE])
-x0_full_train <- as.h2o(full.train[, c(3:12), with = FALSE])
-x0_test <- as.h2o(test[, c(3:12), with = FALSE])
+x <- rbind(x0_train, x0_valid)
+x <- as.matrix(x)
+x <- matrix(as.numeric(x), nrow(x), ncol(x))
+trind <- 1:length(y)
+teind <- (nrow(train)+1):nrow(x)
 
+# Set necessary parameter - should change to softprob for ensembles later
+# This is just easy now.
+param <- list("objective" = "multi:softmax",
+              "eval_metric" = "mlogloss",
+              "num_class" = length(table(y)),
+              "nthread" = 8,
+              "gamma" = 0.1,
+              "colsample_bytree" = 0.91,
+              "min_child_weight" = 3,
+              "max_depth" = 15)
 
-gbm.h20 <- h2o.gbm(x = names(x0_train)[1:ncol(x0_train) -1],
-                  learn_rate = 0.3,
-                  y = names(x0_train)[ncol(x0_train)],
-                  training_frame = x0_full_train,
-                  ntrees = 1000)
-y_pred <- as.data.frame(h2o.predict(gbm.h20, x0_test))
-test[, preds := y_pred$predict]
+# # Run Cross Valication
+# cv.nround <- 250
+# bst.cv <- xgb.cv(param=param, 
+#                 data = x[trind,], 
+#                 label = y, 
+#                 nfold = 5, 
+#                 nrounds=cv.nround,
+#                 "eta"=0.1)
 
-write.csv(test, './data/dev_test_basic_N_cookies.csv', row.names = F)
+# Train the model - AWFUL RESULTS ATM
+nround <- 500
+bst <- xgboost(param=param, 
+              data = x[trind,], 
+              label = y,
+              nrounds=nround, 
+              "eta"=0.1,
+              early.stop.round = 5)
 
-
-
-
+# Make prediction - remember to add 1 to re-align
+pred <- predict(bst,x[teind,]) + 1
+valid <- cbind(valid, pred)
