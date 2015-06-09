@@ -6,7 +6,6 @@
 
 library(data.table)
 require(xgboost)
-require(data.table)
 require(methods)
 
 # If training and validation splits of data have not been created run
