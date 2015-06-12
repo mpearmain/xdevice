@@ -6,7 +6,6 @@
 
 library(data.table)
 require(xgboost)
-require(data.table)
 require(methods)
 
 # If training and validation splits of data have not been created run
@@ -63,12 +62,12 @@ param <- list("objective" = "multi:softmax",
 #                 "eta"=0.1)
 
 # Train the model - AWFUL RESULTS ATM
-nround <- 500
+nround <- 5000
 bst <- xgboost(param=param, 
               data = x[trind,], 
               label = y,
               nrounds=nround, 
-              "eta"=0.1,
+              "eta"=0.01,
               early.stop.round = 5)
 
 # Make prediction - remember to add 1 to re-align
