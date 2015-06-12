@@ -1,3 +1,4 @@
+
 # Simple script to merge cookies data and device data on train and validation data.
 # The aim of this script is to provinde a benchmark figure as to the number of cookies a device should have
 # multiple improvements can be made along the way.
@@ -12,7 +13,6 @@ require(methods)
 source('./cv/cv.R') #to create data sets for reproducibility.
 # Run feature engieering for cookies
 source('./R/feat_engineer.R')
-
 
 # Read cookie data.
 cookies <- fread('./data/cookie_all_basic.csv')
