@@ -11,7 +11,7 @@ require(methods)
 # If training and validation splits of data have not been created run
 source('./cv/cv.R') #to create data sets for reproducibility.
 # Run feature engieering for cookies
-source('./R/cookie_n_feat_engineer.R')
+source('./R/feat_engineer.R')
 
 
 # Read cookie data.
@@ -62,7 +62,7 @@ param <- list("objective" = "multi:softmax",
 #                 "eta"=0.1)
 
 # Train the model - AWFUL RESULTS ATM
-nround <- 5000
+nround <- 500
 bst <- xgboost(param=param, 
               data = x[trind,], 
               label = y,
