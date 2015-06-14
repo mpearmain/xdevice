@@ -21,6 +21,7 @@ cookies.tbl <- cookies[, list('cookie_cnt' = .N), by = "drawbridge_handle"]
 # We loose some unmatched values here as its a natural join.
 train <- merge(train, cookies.tbl, by = 'drawbridge_handle')
 valid <- merge(valid, cookies.tbl, by = 'drawbridge_handle')
+
 # Its a big flaw doing this as classification as it bounds the options,
 # however i think it'll get us a long way just predicting more than #1 cookie slot.
 train[, cookie_cnt := as.factor(cookie_cnt)]
@@ -54,19 +55,19 @@ param <- list("objective" = "multi:softmax",
 
 # # Run Cross Valication
 # cv.nround <- 250
-# bst.cv <- xgb.cv(param=param, 
-#                 data = x[trind,], 
-#                 label = y, 
-#                 nfold = 5, 
+# bst.cv <- xgb.cv(param=param,
+#                 data = x[trind,],
+#                 label = y,
+#                 nfold = 5,
 #                 nrounds=cv.nround,
 #                 "eta"=0.1)
 
 # Train the model - AWFUL RESULTS ATM
 nround <- 500
-bst <- xgboost(param=param, 
-              data = x[trind,], 
+bst <- xgboost(param=param,
+              data = x[trind,],
               label = y,
-              nrounds=nround, 
+              nrounds=nround,
               "eta"=0.01,
               early.stop.round = 5)
 
