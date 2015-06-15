@@ -39,8 +39,10 @@ read_bad_csv <- function(file_name, bad_col=3, n_max=-1) {
   return(read_csv(temp_csv_2))
 }
 
-# The first improperly formatted CSV file is id_all_ip.csv.
 # Here, we'll read it in properly (set n_max to -1 to process all the lines).
+# property_category.csv.
+property_category <- read_bad_csv("./data/property_category.csv", bad_col=2, n_max=-1)
+write.csv(property_category, './data/property_category_DF.csv', row.names = F)
 
 ip <- read_bad_csv("./data/id_all_ip.csv", bad_col=3, n_max=-1)
 write.csv(ip, './data/id_all_ip_DF.csv', row.names = F)
@@ -48,7 +50,3 @@ write.csv(ip, './data/id_all_ip_DF.csv', row.names = F)
 #The next improperly formatted CSV file is id_all_property.csv.
 property <- read_bad_csv("./data/id_all_property.csv", bad_col=3, n_max=-1)
 write.csv(property, './data/id_all_property_DF.csv', row.names = F)
-
-#The final improperly formatted CSV file is property_category.csv.
-property_category <- read_bad_csv("./data/property_category.csv", bad_col=2, n_max=-1)
-write.csv(property_category, './data/property_category_DF.csv', row.names = F)
